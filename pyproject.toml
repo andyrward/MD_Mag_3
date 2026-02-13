@@ -4,4 +4,18 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.2",
+    "pandas>=3.0.0",
+    "pytest>=9.0.2",
+    "scipy>=1.17.0",
+    "tqdm>=4.67.3",
+]
+
+[dependency-groups]
+dev = [
+    "black>=26.1.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.15.1",
+]
