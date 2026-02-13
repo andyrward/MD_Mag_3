@@ -119,21 +119,25 @@ class TestChainFormation:
         p3 = Particle(id=2, position=np.array([503.0, 498.0, 520.0]), np_type='A')
         sim.particles = [p1, p2, p3]
         
-        # Store relative positions
-        com_initial = np.mean([p.position for p in sim.particles], axis=0)
-        relative_positions = [p.position - com_initial for p in sim.particles]
-        
-        # Create chain
+        # Create chain and compute periodicity-aware center of mass
         chain = MagneticChain(id=0, particle_ids=[0, 1, 2])
         chain.update_center_of_mass(sim.particles, sim.box_size)
         chain.calculate_diffusion(sim.D_trans)
         sim.chains = [chain]
         
+        # Ensure initial chain geometry is enforced as in a real simulation step
+        sim.enforce_chain_geometry_initial([chain])
+        
+        # Store relative positions using chain's center of mass (handles periodic boundaries)
+        com_initial = chain.center_of_mass
+        relative_positions = [p.position - com_initial for p in sim.particles]
+        
         # Move chain
         sim.move_chains_brownian([chain], dt=0.01)
         
-        # Check that relative positions are preserved
-        com_final = np.mean([p.position for p in sim.particles], axis=0)
+        # Check that relative positions are preserved (recompute COM with periodic handling)
+        chain.update_center_of_mass(sim.particles, sim.box_size)
+        com_final = chain.center_of_mass
         relative_positions_final = [p.position - com_final for p in sim.particles]
         
         for i in range(3):

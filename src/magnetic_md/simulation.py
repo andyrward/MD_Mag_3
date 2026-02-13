@@ -1,6 +1,7 @@
 """Main simulation engine for magnetic nanoparticle MD."""
 
 from typing import List, Callable, Dict, Any
+import warnings
 import numpy as np
 from .particles import Particle, Link, LinkType, MagneticChain
 
@@ -12,10 +13,13 @@ class MagneticSimulation:
         kT = 4.14 pN·nm at 300K
         eta = 1e-9 pN·s/nm² for water
         D = kT / (3 * pi * eta * d_np)
+    
+    Simulation parameters:
+        CHAIN_SPACING_TOLERANCE: Relative tolerance (10%) for checking whether
+            chains are already properly spaced before applying adjustments.
     """
     
-    # Tolerance for checking if chains are already properly spaced (10%)
-    CHAIN_SPACING_TOLERANCE = 0.1
+    CHAIN_SPACING_TOLERANCE = 0.1  # Relative tolerance (10%) for chain spacing checks
     
     def __init__(
         self,
@@ -309,10 +313,11 @@ class MagneticSimulation:
                 particle.position = particle.position % self.box_size
     
     def enforce_chain_geometry_initial(self, chains: List[MagneticChain]) -> None:
-        """Set initial z-spacing for chains while preserving x,y structure.
+        """Set initial z-spacing for newly formed chains while preserving x,y structure.
         
-        This should only be called when chains first form, not every timestep.
-        After initial setup, Brownian motion preserves rigid body structure.
+        This method checks if chains are already properly initialized and skips them,
+        so it can be safely called every timestep. After initial setup, Brownian motion
+        preserves rigid body structure.
         
         Args:
             chains: List of chains to initialize geometry for
@@ -337,10 +342,12 @@ class MagneticSimulation:
             if len(sorted_z) > 1:
                 for i in range(len(sorted_z) - 1):
                     spacing = sorted_z[i + 1] - sorted_z[i]
-                    # Handle periodic boundaries
-                    if spacing < 0:
+                    # Handle periodic boundaries using minimum image convention
+                    if spacing > self.box_size / 2:
+                        spacing -= self.box_size
+                    elif spacing < -self.box_size / 2:
                         spacing += self.box_size
-                    if not np.isclose(spacing, self.d_chain, rtol=self.CHAIN_SPACING_TOLERANCE):
+                    if not np.isclose(abs(spacing), self.d_chain, rtol=self.CHAIN_SPACING_TOLERANCE):
                         is_properly_initialized = False
                         break
             
@@ -358,11 +365,8 @@ class MagneticSimulation:
             z_center = com_wrapped[2]
             z_start = z_center - total_length / 2.0
             
-            # Wrap z_start if needed
-            if z_start < 0:
-                z_start += self.box_size
-            elif z_start + total_length >= self.box_size:
-                z_start -= self.box_size
+            # Wrap z_start into [0, box_size) to handle all chain lengths robustly
+            z_start = z_start % self.box_size
             
             # Position particles: maintain x,y from COM, set ideal z-spacing
             for i, pid in enumerate(chain.particle_ids):
@@ -402,6 +406,12 @@ class MagneticSimulation:
         Args:
             chains: List of chains to enforce geometry on
         """
+        warnings.warn(
+            "enforce_chain_geometry_deprecated is deprecated. "
+            "Use enforce_chain_geometry_initial instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         particle_dict = {p.id: p for p in self.particles}
         
         for chain in chains:
