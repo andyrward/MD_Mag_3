@@ -14,6 +14,9 @@ class MagneticSimulation:
         D = kT / (3 * pi * eta * d_np)
     """
     
+    # Tolerance for checking if chains are already properly spaced (10%)
+    CHAIN_SPACING_TOLERANCE = 0.1
+    
     def __init__(
         self,
         N_A: int,
@@ -330,18 +333,18 @@ class MagneticSimulation:
             sorted_z = [z_positions[i] for i in sorted_indices]
             
             # Check if already properly spaced (within tolerance)
-            already_spaced = True
+            is_properly_initialized = True
             if len(sorted_z) > 1:
                 for i in range(len(sorted_z) - 1):
                     spacing = sorted_z[i + 1] - sorted_z[i]
                     # Handle periodic boundaries
                     if spacing < 0:
                         spacing += self.box_size
-                    if not np.isclose(spacing, self.d_chain, rtol=0.1):
-                        already_spaced = False
+                    if not np.isclose(spacing, self.d_chain, rtol=self.CHAIN_SPACING_TOLERANCE):
+                        is_properly_initialized = False
                         break
             
-            if already_spaced:
+            if is_properly_initialized:
                 continue  # Skip this chain, it's already properly formed
             
             # Update center of mass

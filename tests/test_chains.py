@@ -100,13 +100,14 @@ class TestChainFormation:
         y_positions = [p.position[1] for p in sim.particles]
         
         # Check they're not all the same (should have variation)
+        # Round to 2 decimal places (0.01 nm precision) to account for floating point errors
         assert len(set(np.round(x_positions, 2))) > 1, "All x positions are identical!"
         assert len(set(np.round(y_positions, 2))) > 1, "All y positions are identical!"
         
         # Check z-spacing is correct
         z_positions = sorted([p.position[2] for p in sim.particles])
-        assert np.isclose(z_positions[1] - z_positions[0], sim.d_chain, rtol=0.1)
-        assert np.isclose(z_positions[2] - z_positions[1], sim.d_chain, rtol=0.1)
+        assert np.isclose(z_positions[1] - z_positions[0], sim.d_chain, rtol=sim.CHAIN_SPACING_TOLERANCE)
+        assert np.isclose(z_positions[2] - z_positions[1], sim.d_chain, rtol=sim.CHAIN_SPACING_TOLERANCE)
     
     def test_rigid_body_motion_preserves_structure(self):
         """Test that Brownian motion of chains preserves relative positions."""
