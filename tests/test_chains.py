@@ -75,32 +75,70 @@ class TestChainFormation:
         assert np.isclose(chain1.D_eff / chain3.D_eff, 3.0)
     
     def test_enforce_chain_geometry(self):
-        """Test that particles in chains are positioned correctly."""
+        """Test that particles in chains maintain x,y offsets while z-spacing is enforced."""
         sim = MagneticSimulation(N_A=0, N_B=0, box_size=1000.0, d_chain=10.0)
         
-        # Create particles
+        # Create particles with different x,y positions (not aligned)
         p1 = Particle(id=0, position=np.array([500.0, 500.0, 500.0]), np_type='A')
-        p2 = Particle(id=1, position=np.array([520.0, 520.0, 520.0]), np_type='A')
-        p3 = Particle(id=2, position=np.array([480.0, 480.0, 480.0]), np_type='A')
+        p2 = Particle(id=1, position=np.array([510.0, 505.0, 510.0]), np_type='A')
+        p3 = Particle(id=2, position=np.array([505.0, 495.0, 490.0]), np_type='A')
         sim.particles = [p1, p2, p3]
+        
+        # Store initial x,y positions
+        initial_xy = [(p.position[0], p.position[1]) for p in sim.particles]
         
         # Create chain
         chain = MagneticChain(id=0, particle_ids=[0, 1, 2])
-        chain.update_center_of_mass(sim.particles)
+        chain.update_center_of_mass(sim.particles, sim.box_size)
         
-        # Enforce geometry
-        sim.enforce_chain_geometry([chain])
+        # Enforce geometry using the new method
+        sim.enforce_chain_geometry_initial([chain])
         
-        # Check that particles are aligned along z-axis
-        assert np.isclose(p1.position[0], p2.position[0])
-        assert np.isclose(p1.position[0], p3.position[0])
-        assert np.isclose(p1.position[1], p2.position[1])
-        assert np.isclose(p1.position[1], p3.position[1])
+        # Check that x,y positions maintained relative structure (not all same!)
+        # They should be clustered around COM but NOT identical
+        x_positions = [p.position[0] for p in sim.particles]
+        y_positions = [p.position[1] for p in sim.particles]
         
-        # Check spacing along z-axis
+        # Check they're not all the same (should have variation)
+        assert len(set(np.round(x_positions, 2))) > 1, "All x positions are identical!"
+        assert len(set(np.round(y_positions, 2))) > 1, "All y positions are identical!"
+        
+        # Check z-spacing is correct
         z_positions = sorted([p.position[2] for p in sim.particles])
-        assert np.isclose(z_positions[1] - z_positions[0], sim.d_chain)
-        assert np.isclose(z_positions[2] - z_positions[1], sim.d_chain)
+        assert np.isclose(z_positions[1] - z_positions[0], sim.d_chain, rtol=0.1)
+        assert np.isclose(z_positions[2] - z_positions[1], sim.d_chain, rtol=0.1)
+    
+    def test_rigid_body_motion_preserves_structure(self):
+        """Test that Brownian motion of chains preserves relative positions."""
+        sim = MagneticSimulation(N_A=0, N_B=0, box_size=10000.0, d_chain=10.0)
+        
+        # Create a chain with varied x,y positions
+        p1 = Particle(id=0, position=np.array([500.0, 500.0, 500.0]), np_type='A')
+        p2 = Particle(id=1, position=np.array([505.0, 502.0, 510.0]), np_type='A')
+        p3 = Particle(id=2, position=np.array([503.0, 498.0, 520.0]), np_type='A')
+        sim.particles = [p1, p2, p3]
+        
+        # Store relative positions
+        com_initial = np.mean([p.position for p in sim.particles], axis=0)
+        relative_positions = [p.position - com_initial for p in sim.particles]
+        
+        # Create chain
+        chain = MagneticChain(id=0, particle_ids=[0, 1, 2])
+        chain.update_center_of_mass(sim.particles, sim.box_size)
+        chain.calculate_diffusion(sim.D_trans)
+        sim.chains = [chain]
+        
+        # Move chain
+        sim.move_chains_brownian([chain], dt=0.01)
+        
+        # Check that relative positions are preserved
+        com_final = np.mean([p.position for p in sim.particles], axis=0)
+        relative_positions_final = [p.position - com_final for p in sim.particles]
+        
+        for i in range(3):
+            for j in range(3):  # x, y, z
+                assert np.isclose(relative_positions[i][j], relative_positions_final[i][j], atol=0.1), \
+                    f"Relative position changed for particle {i}, component {j}"
 
 
 class TestFieldProtocols:

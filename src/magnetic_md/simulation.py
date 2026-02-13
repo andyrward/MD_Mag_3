@@ -305,8 +305,93 @@ class MagneticSimulation:
                 # Apply periodic boundary conditions
                 particle.position = particle.position % self.box_size
     
-    def enforce_chain_geometry(self, chains: List[MagneticChain]) -> None:
-        """Position particles along z-axis with d_chain spacing.
+    def enforce_chain_geometry_initial(self, chains: List[MagneticChain]) -> None:
+        """Set initial z-spacing for chains while preserving x,y structure.
+        
+        This should only be called when chains first form, not every timestep.
+        After initial setup, Brownian motion preserves rigid body structure.
+        
+        Args:
+            chains: List of chains to initialize geometry for
+        """
+        particle_dict = {p.id: p for p in self.particles}
+        
+        for chain in chains:
+            if len(chain.particle_ids) < 2:
+                continue
+            
+            # Skip if chain already has proper spacing (already formed)
+            # Check if particles are already aligned along z-axis with proper spacing
+            positions = [particle_dict[pid].position for pid in chain.particle_ids]
+            z_positions = [pos[2] for pos in positions]
+            
+            # Sort by z to check spacing
+            sorted_indices = np.argsort(z_positions)
+            sorted_z = [z_positions[i] for i in sorted_indices]
+            
+            # Check if already properly spaced (within tolerance)
+            already_spaced = True
+            if len(sorted_z) > 1:
+                for i in range(len(sorted_z) - 1):
+                    spacing = sorted_z[i + 1] - sorted_z[i]
+                    # Handle periodic boundaries
+                    if spacing < 0:
+                        spacing += self.box_size
+                    if not np.isclose(spacing, self.d_chain, rtol=0.1):
+                        already_spaced = False
+                        break
+            
+            if already_spaced:
+                continue  # Skip this chain, it's already properly formed
+            
+            # Update center of mass
+            chain.update_center_of_mass(self.particles, self.box_size)
+            
+            # Calculate ideal z-positions along chain axis
+            N = len(chain.particle_ids)
+            total_length = (N - 1) * self.d_chain
+            
+            com_wrapped = chain.center_of_mass % self.box_size
+            z_center = com_wrapped[2]
+            z_start = z_center - total_length / 2.0
+            
+            # Wrap z_start if needed
+            if z_start < 0:
+                z_start += self.box_size
+            elif z_start + total_length >= self.box_size:
+                z_start -= self.box_size
+            
+            # Position particles: maintain x,y from COM, set ideal z-spacing
+            for i, pid in enumerate(chain.particle_ids):
+                particle = particle_dict[pid]
+                
+                # Calculate current offset from COM in x,y
+                # Use unwrapped positions to handle periodic boundaries correctly
+                dx = particle.position[0] - chain.center_of_mass[0]
+                dy = particle.position[1] - chain.center_of_mass[1]
+                
+                # Apply periodic boundary correction if needed
+                if dx > self.box_size / 2:
+                    dx -= self.box_size
+                elif dx < -self.box_size / 2:
+                    dx += self.box_size
+                    
+                if dy > self.box_size / 2:
+                    dy -= self.box_size
+                elif dy < -self.box_size / 2:
+                    dy += self.box_size
+                
+                # Set new position: COM + offset in x,y, ideal z-spacing
+                particle.position[0] = (com_wrapped[0] + dx) % self.box_size
+                particle.position[1] = (com_wrapped[1] + dy) % self.box_size
+                particle.position[2] = (z_start + i * self.d_chain) % self.box_size
+    
+    def enforce_chain_geometry_deprecated(self, chains: List[MagneticChain]) -> None:
+        """DEPRECATED: Position particles along z-axis with d_chain spacing.
+        
+        WARNING: This method collapses all particles to the same (x,y) coordinates,
+        which destroys the rigid body structure. Use enforce_chain_geometry_initial()
+        instead, which preserves x,y offsets.
         
         This function ensures chains maintain proper geometry without breaking
         across periodic boundaries. The entire chain is kept contiguous.
@@ -364,11 +449,11 @@ class MagneticSimulation:
             # Identify chains
             self.identify_magnetic_chains()
             
-            # Enforce chain geometry before applying Brownian motion
-            # This ensures chains have correct structure before movement
-            self.enforce_chain_geometry(self.chains)
+            # Enforce geometry BEFORE motion (only for newly formed chains)
+            # This sets initial z-spacing when chains first form
+            self.enforce_chain_geometry_initial(self.chains)
             
-            # Move chains with rigid body motion
+            # Move chains with rigid body motion (preserves relative positions!)
             self.move_chains_brownian(self.chains, dt)
             
             # Move free particles
