@@ -135,6 +135,23 @@ python examples/test_chain_formation.py
 
 ## Testing
 
+### Basic Chain Test
+
+Validate fundamental chain mechanics with 2 particles before testing complex multi-particle scenarios:
+
+```bash
+python examples/test_two_particle_chain.py
+```
+
+This validates:
+- Magnetic link formation between properly-spaced particles
+- Chain identification and tracking
+- Rigid body motion (particles move together)
+- Separation stability (constant spacing maintained)
+- Diffusion coefficient scaling (D_chain = D_single / N)
+
+### Unit Tests
+
 Run the test suite:
 
 ```bash
