@@ -31,3 +31,8 @@ Desktop.ini
 dist/
 build/
 *.egg-info/
+
+# Generated output files
+*.png
+*.mp4
+*.gif
