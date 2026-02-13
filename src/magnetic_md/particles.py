@@ -69,11 +69,12 @@ class MagneticChain:
     center_of_mass: np.ndarray = field(default_factory=lambda: np.zeros(3))
     D_eff: float = 0.0
     
-    def update_center_of_mass(self, particles: List[Particle]) -> None:
+    def update_center_of_mass(self, particles: List[Particle], box_size: float = None) -> None:
         """Update the center of mass of the chain.
         
         Args:
             particles: List of all particles in the simulation
+            box_size: Size of simulation box for periodic boundary handling
         """
         if not self.particle_ids:
             self.center_of_mass = np.zeros(3)
@@ -82,9 +83,28 @@ class MagneticChain:
         # Create a dictionary for fast particle lookup
         particle_dict = {p.id: p for p in particles}
         
-        # Calculate center of mass
+        # Get positions
         positions = [particle_dict[pid].position for pid in self.particle_ids]
-        self.center_of_mass = np.mean(positions, axis=0)
+        
+        if box_size is None or len(positions) == 1:
+            # No periodic boundary handling needed
+            self.center_of_mass = np.mean(positions, axis=0)
+        else:
+            # Handle periodic boundaries: unwrap positions relative to first particle
+            ref_pos = positions[0]
+            unwrapped = [ref_pos]
+            
+            for pos in positions[1:]:
+                # Calculate minimum image distance
+                delta = pos - ref_pos
+                delta = delta - box_size * np.round(delta / box_size)
+                # Unwrapped position relative to reference
+                unwrapped.append(ref_pos + delta)
+            
+            # Calculate COM from unwrapped positions
+            com_unwrapped = np.mean(unwrapped, axis=0)
+            # Wrap back into box
+            self.center_of_mass = com_unwrapped % box_size
     
     def calculate_diffusion(self, D_single: float) -> None:
         """Calculate effective diffusion coefficient for the chain.

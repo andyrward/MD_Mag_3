@@ -27,8 +27,6 @@ MD_Mag_3 implements molecular dynamics (MD) simulations of magnetic nanoparticle
 - Python >= 3.12
 - numpy >= 2.4.2
 - matplotlib >= 3.10.8
-- scipy >= 1.17.0
-- pandas >= 3.0.0
 - pytest >= 9.0.2 (for testing)
 
 ### Install from source

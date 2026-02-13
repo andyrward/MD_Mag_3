@@ -1,10 +1,9 @@
 """Tests for the main simulation engine."""
 
 import numpy as np
-import pytest
 from src.magnetic_md.simulation import MagneticSimulation
 from src.magnetic_md.particles import Particle, LinkType
-from src.magnetic_md.fields import constant_field, square_wave
+from src.magnetic_md.fields import constant_field
 
 
 class TestMagneticSimulation:

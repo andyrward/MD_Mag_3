@@ -92,7 +92,7 @@ def main():
     print("  - Saved: chain_statistics.png")
     
     # 2. Final 3D particle configuration
-    fig2, ax2 = plot_particles_3d(
+    plot_particles_3d(
         sim.particles,
         sim.chains,
         sim.box_size,
@@ -103,7 +103,7 @@ def main():
     print("  - Saved: particles_3d.png")
     
     # 3. 2D projections
-    fig3, ax3 = plot_particle_positions_2d(
+    plot_particle_positions_2d(
         sim.particles,
         sim.chains,
         sim.box_size,
@@ -113,7 +113,7 @@ def main():
     plt.savefig('particles_xy.png', dpi=150, bbox_inches='tight')
     print("  - Saved: particles_xy.png")
     
-    fig4, ax4 = plot_particle_positions_2d(
+    plot_particle_positions_2d(
         sim.particles,
         sim.chains,
         sim.box_size,

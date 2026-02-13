@@ -4,9 +4,45 @@ from typing import List, Dict, Any, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from mpl_toolkits.mplot3d import Axes3D
 
 from .particles import Particle, MagneticChain
+
+
+def _split_chain_at_boundaries(positions: np.ndarray, box_size: float) -> List[np.ndarray]:
+    """Split chain positions into contiguous segments at periodic boundaries.
+    
+    If consecutive particles are separated by more than half the box size
+    in any dimension, treat this as a wrap and start a new segment.
+    
+    Args:
+        positions: Array of particle positions (N, 3)
+        box_size: Size of simulation box
+        
+    Returns:
+        List of position arrays, one for each contiguous segment
+    """
+    if len(positions) < 2:
+        return [positions]
+    
+    segments = []
+    current_segment = [positions[0]]
+    half_box = box_size * 0.5
+    
+    for i in range(1, len(positions)):
+        delta = np.abs(positions[i] - positions[i - 1])
+        if np.any(delta > half_box):
+            # Large jump: end current segment and start a new one
+            if len(current_segment) > 1:
+                segments.append(np.array(current_segment))
+            current_segment = [positions[i]]
+        else:
+            current_segment.append(positions[i])
+    
+    # Add the last segment
+    if len(current_segment) > 1:
+        segments.append(np.array(current_segment))
+    
+    return segments if segments else [positions]
 
 
 def plot_particles_3d(
@@ -46,15 +82,21 @@ def plot_particles_3d(
         ax.scatter(pos_B[:, 0], pos_B[:, 1], pos_B[:, 2], 
                   c='red', s=50, alpha=0.6, label='Type B')
     
-    # Draw chain connections
+    # Draw chain connections, handling periodic boundaries
     if show_chains and chains:
         particle_dict = {p.id: p for p in particles}
         for chain in chains:
             if len(chain.particle_ids) > 1:
                 positions = [particle_dict[pid].position for pid in chain.particle_ids]
                 positions = np.array(positions)
-                ax.plot(positions[:, 0], positions[:, 1], positions[:, 2], 
-                       'k-', linewidth=2, alpha=0.5)
+                
+                # Split chains into segments to avoid drawing across periodic boundaries
+                segments = _split_chain_at_boundaries(positions, box_size)
+                
+                # Plot each contiguous segment separately
+                for seg in segments:
+                    ax.plot(seg[:, 0], seg[:, 1], seg[:, 2],
+                           'k-', linewidth=2, alpha=0.5)
     
     # Set labels and limits
     ax.set_xlabel('X (nm)')
@@ -160,15 +202,21 @@ def plot_particle_positions_2d(
         ax.scatter(pos_B[:, idx1], pos_B[:, idx2], 
                   c='red', s=50, alpha=0.6, label='Type B')
     
-    # Draw chain connections
+    # Draw chain connections, handling periodic boundaries
     if chains:
         particle_dict = {p.id: p for p in particles}
         for chain in chains:
             if len(chain.particle_ids) > 1:
                 positions = [particle_dict[pid].position for pid in chain.particle_ids]
                 positions = np.array(positions)
-                ax.plot(positions[:, idx1], positions[:, idx2], 
-                       'k-', linewidth=2, alpha=0.5)
+                
+                # Split chains into segments to avoid drawing across periodic boundaries
+                segments = _split_chain_at_boundaries(positions, box_size)
+                
+                # Plot each contiguous segment separately
+                for seg in segments:
+                    ax.plot(seg[:, idx1], seg[:, idx2],
+                           'k-', linewidth=2, alpha=0.5)
     
     # Set labels and limits
     ax.set_xlabel(xlabel)

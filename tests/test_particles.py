@@ -1,7 +1,6 @@
 """Tests for particle, link, and chain data structures."""
 
 import numpy as np
-import pytest
 from src.magnetic_md.particles import LinkType, Link, Particle, MagneticChain
 
 

@@ -1,7 +1,6 @@
 """Tests for chain formation and dynamics."""
 
 import numpy as np
-import pytest
 from src.magnetic_md.simulation import MagneticSimulation
 from src.magnetic_md.particles import Particle, MagneticChain, LinkType
 from src.magnetic_md.fields import constant_field, square_wave, delayed_activation
