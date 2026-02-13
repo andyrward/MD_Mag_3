@@ -24,6 +24,28 @@ from magnetic_md.visualization import (
 )
 
 
+def check_chain_structure(sim):
+    """Print diagnostic info about chain structure."""
+    if not sim.chains:
+        print("No chains present.")
+        return
+    
+    for chain in sim.chains:
+        particle_dict = {p.id: p for p in sim.particles}
+        particle_positions = [particle_dict[pid].position for pid in chain.particle_ids]
+        
+        # Check x,y variation
+        x_coords = [pos[0] for pos in particle_positions]
+        y_coords = [pos[1] for pos in particle_positions]
+        z_coords = [pos[2] for pos in particle_positions]
+        
+        print(f"Chain {chain.id}:")
+        print(f"  X variation: {np.std(x_coords):.2f} nm")
+        print(f"  Y variation: {np.std(y_coords):.2f} nm")
+        print(f"  Z spacing: {np.diff(sorted(z_coords))}")
+        print(f"  Particles: {len(chain.particle_ids)}")
+
+
 def main():
     """Run example simulation and generate visualizations."""
     print("=" * 60)
@@ -73,6 +95,10 @@ def main():
     print(f"  - Final number of chains: {final_state['n_chains']}")
     print(f"  - Average chain length: {final_state['avg_chain_length']:.2f}")
     print(f"  - Maximum chain length: {final_state['max_chain_length']}")
+    
+    # Check chain structure after field turns ON
+    print("\nChain structure diagnostics:")
+    check_chain_structure(sim)
     
     # Find peak statistics
     max_chains = max(d['n_chains'] for d in trajectory)
