@@ -347,7 +347,7 @@ class MagneticSimulation:
                         spacing -= self.box_size
                     elif spacing < -self.box_size / 2:
                         spacing += self.box_size
-                    if not np.isclose(abs(spacing), self.d_chain, rtol=self.CHAIN_SPACING_TOLERANCE):
+                    if not np.isclose(spacing, self.d_chain, rtol=self.CHAIN_SPACING_TOLERANCE):
                         is_properly_initialized = False
                         break
             
