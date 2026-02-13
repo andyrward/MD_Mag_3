@@ -20,6 +20,12 @@ from magnetic_md import MagneticSimulation, Particle
 def test_two_particle_chain():
     """Run two-particle chain formation test with detailed diagnostics."""
     
+    def minimum_image_separation(pos1, pos2, box_size):
+        """Calculate minimum image distance accounting for periodic boundaries."""
+        dr = pos2 - pos1
+        dr = dr - box_size * np.round(dr / box_size)
+        return np.linalg.norm(dr)
+    
     print("=" * 70)
     print("TWO-PARTICLE MAGNETIC CHAIN TEST")
     print("=" * 70)
@@ -157,8 +163,7 @@ def test_two_particle_chain():
     com_positions = []
     
     # Initial separation
-    sep_vec = sim.particles[1].position - sim.particles[0].position
-    separations.append(np.linalg.norm(sep_vec))
+    separations.append(minimum_image_separation(sim.particles[0].position, sim.particles[1].position, sim.box_size))
     com_positions.append((sim.particles[0].position + sim.particles[1].position) / 2.0)
     
     # Run simulation
@@ -169,8 +174,7 @@ def test_two_particle_chain():
         positions_0.append(sim.particles[0].position.copy())
         positions_1.append(sim.particles[1].position.copy())
         
-        sep_vec = sim.particles[1].position - sim.particles[0].position
-        separations.append(np.linalg.norm(sep_vec))
+        separations.append(minimum_image_separation(sim.particles[0].position, sim.particles[1].position, sim.box_size))
         
         com = (sim.particles[0].position + sim.particles[1].position) / 2.0
         com_positions.append(com)
