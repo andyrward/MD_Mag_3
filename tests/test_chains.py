@@ -184,6 +184,7 @@ class TestFieldProtocols:
         assert False in field_states  # Field was OFF at some point
         
         # Check that field changes at expected times
-        assert field_states[0] is False  # Start OFF
-        assert field_states[5] is True   # Should be ON at t=0.05
-        assert field_states[10] is False  # Should be OFF at t=0.10
+        # Note: trajectory records state after each step completes
+        assert field_states[0] is False  # At t=0.01, still in OFF phase
+        assert field_states[5] is True   # At t=0.06, in ON phase
+        assert field_states[11] is False  # At t=0.12, back to OFF phase
